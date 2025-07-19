@@ -1,0 +1,4 @@
+repository "2D Gamestudy/2D Gamestudy@14569626845378@cloud"
+  path "/"
+    br "/main"
+    co "/main"
