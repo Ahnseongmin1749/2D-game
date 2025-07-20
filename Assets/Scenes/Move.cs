@@ -2,17 +2,66 @@ using UnityEngine;
 
 public class Move : MonoBehaviour
 {
+    public AudioClip audioJump;
+    public AudioClip audioAttack;
+    public AudioClip audioDamaged;
+    public AudioClip audioItem;
+    public AudioClip audioDie;
+    public AudioClip audioFinish;
+    AudioSource audioSource;
+
+    public GameManager gameManager;
     public float maxSpeed;
     SpriteRenderer spriteRenderer;
     Rigidbody2D rigid;
     Animator anim;
     public float jumpPower;
+    BoxCollider2D boxcollider;
 
     void Awake()
     {
         rigid = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         anim = GetComponent<Animator>();
+        boxcollider = GetComponent<BoxCollider2D>();
+        audioSource = GetComponent<AudioSource>();
+    }
+
+    void PlaySound(string action)
+    {
+        switch (action)
+        {
+            case "JUMP":
+                audioSource.clip = audioJump;
+                audioSource.Play();
+                break;
+
+            case "ATTACK":
+                audioSource.clip = audioAttack;
+                audioSource.Play();
+                break;
+
+            case "DAMAGED":
+                audioSource.clip = audioDamaged;
+                audioSource.Play();
+                break;
+
+            case "ITME":
+                audioSource.clip = audioItem;
+                audioSource.Play();
+                break;
+
+            case "DIE":
+                audioSource.clip = audioDie;
+                audioSource.Play();
+                break;
+
+            case "FINISH":
+                audioSource.clip = audioFinish;
+                audioSource.Play();
+                break;
+
+        }
     }
 
     private void Update()
@@ -22,6 +71,7 @@ public class Move : MonoBehaviour
         {
             rigid.AddForce(Vector2.up * jumpPower, ForceMode2D.Impulse);
             anim.SetBool("isJumping", true);
+            PlaySound("JUMP");
         }
 
         //Stop Speed
@@ -125,6 +175,9 @@ public class Move : MonoBehaviour
 
     void OnDamaged(Vector2 targetPos)
     {
+        //Health Down
+        gameManager.HealthDown();
+
         //Change Layer (Immortal Active)
         gameObject.layer = 11;
 
@@ -141,6 +194,8 @@ public class Move : MonoBehaviour
         anim.SetTrigger("doDamaged");
 
         Invoke("offDamaged", 3);
+
+        PlaySound("DAMAGED");
     }
 
     void offDamaged()
@@ -151,7 +206,70 @@ public class Move : MonoBehaviour
 
     void OnAttack(Transform enemy)
     {
+        //point
+        gameManager.stagePoint += 100;
+
+        //Reaction Force
+        rigid.AddForce(Vector2.up *10, ForceMode2D.Impulse);
+
+        //Enemy Die
         EnemyMove enemyMove = enemy.GetComponent<EnemyMove>();
-        enemyMove.OnDamaged();
+        enemyMove.EnemyOnDamaged();
+
+        PlaySound("ATTACK");
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.gameObject.tag == "Item")
+        {
+
+            //point
+            bool isBronze = collision.gameObject.name.Contains("Bronze");
+            bool isSilver = collision.gameObject.name.Contains("Silver");
+            bool isGold = collision.gameObject.name.Contains("Gold");
+
+            if(isBronze)
+                gameManager.stagePoint += 50;
+
+            if(isSilver)
+                gameManager.stagePoint += 100;
+
+            if(isGold)
+                gameManager.stagePoint += 300;
+
+            //Deactive Item
+            collision.gameObject.SetActive(false);
+
+            PlaySound("ITEM");
+        }
+        else if(collision.gameObject.tag == "Finish")
+        {
+            //Next Stage
+            gameManager.NextStage();
+            PlaySound("FINISH");
+        }
+    }
+
+    public void OnDie()
+    {
+        //Sprite Alpha
+        spriteRenderer.color = new Color(1, 1, 1, 0.4f);
+
+        //Sprite Flip Y
+        spriteRenderer.flipY = true;
+
+        //Collider Disable
+        boxcollider.enabled = false;
+
+        //Die Effect Jump
+        rigid.AddForce(Vector2.up * 5, ForceMode2D.Impulse);
+
+        PlaySound("DIE");
+    }
+
+    public void VelocityZero()
+    {
+        rigid.linearVelocity = Vector2.zero;
     }
 }
